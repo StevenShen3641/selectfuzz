@@ -10,20 +10,6 @@ python3 -m pip install --upgrade pip
 
 python3 -m pip install networkx pydot pydotplus
 
-# link xlocale
-ln -s /usr/include/locale.h /usr/include/xlocale.h
-
-sed -i '/struct sigaltstack;/d' /build/llvm-4.0.0.src/projects/compiler-rt/lib/sanitizer_common/sanitizer_linux.h
-sed -i 's/uptr internal_sigaltstack(const struct sigaltstack\* ss,/uptr internal_sigaltstack(const void\* ss,/' /build/llvm-4.0.0.src/projects/compiler-rt/lib/sanitizer_common/sanitizer_linux.h
-sed -i 's/struct sigaltstack\* oss);/void\* oss);/' /build/llvm-4.0.0.src/projects/compiler-rt/lib/sanitizer_common/sanitizer_linux.h
-sed -i 's/uptr internal_sigaltstack(const struct sigaltstack \*ss,/uptr internal_sigaltstack(const void \*ss,/' /build/llvm-4.0.0.src/projects/compiler-rt/lib/sanitizer_common/sanitizer_linux.cc
-sed -i 's/struct sigaltstack \*oss) {/void \*oss) {/' /build/llvm-4.0.0.src/projects/compiler-rt/lib/sanitizer_common/sanitizer_linux.cc
-sed -i 's/struct sigaltstack handler_stack;/stack_t handler_stack;/' /build/llvm-4.0.0.src/projects/compiler-rt/lib/sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cc
-sed -i 's/struct sigaltstack handler_stack;/stack_t handler_stack;/' /build/llvm-4.0.0.src/projects/compiler-rt/lib/sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cc
-sed -i 's/__res_state \*statp = (__res_state\*)state;/struct __res_state \*statp = (struct __res_state\*)state;/' /build/llvm-4.0.0.src/projects/compiler-rt/lib/tsan/rtl/tsan_platform_linux.cc
-sed -i 's/struct sigaltstack SigAltStack;/stack_t SigAltStack;/' /build/llvm-4.0.0.src/projects/compiler-rt/lib/esan/esan_sideline_linux.cpp
-
-
 # llvm 4.0
 mkdir -p /build 
 cd /build 
@@ -42,6 +28,20 @@ mv cfe-4.0.0.src /build/llvm-4.0.0.src/tools/clang
 mv compiler-rt-4.0.0.src /build/llvm-4.0.0.src/projects/compiler-rt 
 mv libcxx-4.0.0.src /build/llvm-4.0.0.src/projects/libcxx 
 mv libcxxabi-4.0.0.src /build/llvm-4.0.0.src/projects/libcxxabi 
+
+# link xlocale
+ln -s /usr/include/locale.h /usr/include/xlocale.h
+
+sed -i '/struct sigaltstack;/d' /build/llvm-4.0.0.src/projects/compiler-rt/lib/sanitizer_common/sanitizer_linux.h
+sed -i 's/uptr internal_sigaltstack(const struct sigaltstack\* ss,/uptr internal_sigaltstack(const void\* ss,/' /build/llvm-4.0.0.src/projects/compiler-rt/lib/sanitizer_common/sanitizer_linux.h
+sed -i 's/struct sigaltstack\* oss);/void\* oss);/' /build/llvm-4.0.0.src/projects/compiler-rt/lib/sanitizer_common/sanitizer_linux.h
+sed -i 's/uptr internal_sigaltstack(const struct sigaltstack \*ss,/uptr internal_sigaltstack(const void \*ss,/' /build/llvm-4.0.0.src/projects/compiler-rt/lib/sanitizer_common/sanitizer_linux.cc
+sed -i 's/struct sigaltstack \*oss) {/void \*oss) {/' /build/llvm-4.0.0.src/projects/compiler-rt/lib/sanitizer_common/sanitizer_linux.cc
+sed -i 's/struct sigaltstack handler_stack;/stack_t handler_stack;/' /build/llvm-4.0.0.src/projects/compiler-rt/lib/sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cc
+sed -i 's/struct sigaltstack handler_stack;/stack_t handler_stack;/' /build/llvm-4.0.0.src/projects/compiler-rt/lib/sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cc
+sed -i 's/__res_state \*statp = (__res_state\*)state;/struct __res_state \*statp = (struct __res_state\*)state;/' /build/llvm-4.0.0.src/projects/compiler-rt/lib/tsan/rtl/tsan_platform_linux.cc
+sed -i 's/struct sigaltstack SigAltStack;/stack_t SigAltStack;/' /build/llvm-4.0.0.src/projects/compiler-rt/lib/esan/esan_sideline_linux.cpp
+
 mkdir -p build-llvm/llvm; cd build-llvm/llvm 
 cmake -G "Ninja" \
       -DLIBCXX_ENABLE_SHARED=OFF \
@@ -53,7 +53,7 @@ cmake -G "Ninja" \
 
 ninja 
 ninja install 
-mkdir /usr/lib/bfd-plugins 
+mkdir -p /usr/lib/bfd-plugins 
 cp /usr/local/lib/libLTO.so /usr/lib/bfd-plugins 
 cp /usr/local/lib/LLVMgold.so /usr/lib/bfd-plugins
 
