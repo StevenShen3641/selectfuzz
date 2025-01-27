@@ -11,17 +11,6 @@ if [ ! -d "$FUZZER/repo" ]; then
     exit 1
 fi
 
-aflgo_patch_file="$FUZZER/src/aflgo.patch"
-
-# openssl
-if [ "$(basename $TARGET)" == "openssl" ]; then
-    echo "TARGET openssl"
-    if [ -f "$aflgo_patch_file" ]; then
-        patch -p1 -d "$FUZZER/repo" < "$aflgo_patch_file"
-        echo "Fuzzing patch file $aflgo_patch_file applied."
-    fi
-	
-fi
 
 cd "$FUZZER/repo"
 CC=clang make clean all -j $(nproc)

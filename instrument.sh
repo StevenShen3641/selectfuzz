@@ -10,6 +10,19 @@ set -e
 # - env CFLAGS and CXXFLAGS must be set to link against Magma instrumentation
 ##
 
+aflgo_patch_file="$FUZZER/src/aflgo.patch"
+
+# openssl
+if [ "$(basename $TARGET)" == "openssl" ]; then
+    echo "TARGET openssl"
+    if [ -f "$aflgo_patch_file" ]; then
+        patch -p1 -d "$FUZZER/repo" < "$aflgo_patch_file"
+        echo "Fuzzing patch file $aflgo_patch_file applied."
+		"$FUZZER/build.sh"
+    fi
+	
+fi
+
 export AFLGO=$FUZZER/repo
 
 mkdir -p $OUT/temp
@@ -45,7 +58,7 @@ TEMP_CXXFLAGS=$CXXFLAGS
 
 if [ "$(basename $TARGET)" == "openssl" ]; then
     echo "TARGET openssl"
-	CONFIGURE_FLAGS="$ADDITIONAL"
+	export CONFIGURE_FLAGS="$ADDITIONAL"
 else
     CFLAGS="$TEMP_CFLAGS $ADDITIONAL"
 	CXXFLAGS="$TEMP_CXXFLAGS $ADDITIONAL"
@@ -58,7 +71,14 @@ cat $TMP_DIR/BBcalls.txt | sort | uniq > $TMP_DIR/BBcalls2.txt && mv $TMP_DIR/BB
 
 $AFLGO/scripts/genDistance.sh $OUT $TMP_DIR
 
-CFLAGS="$TEMP_CFLAGS -distance=$TMP_DIR/distance.cfg.txt" CXXFLAGS="$TEMP_CXXFLAGS -distance=$TMP_DIR/distance.cfg.txt"
+
+if [ "$(basename $TARGET)" == "openssl" ]; then
+    echo "TARGET openssl"
+	CONFIGURE_FLAGS="-distance=$TMP_DIR/distance.cfg.txt"
+else
+	CFLAGS="$TEMP_CFLAGS -distance=$TMP_DIR/distance.cfg.txt" CXXFLAGS="$TEMP_CXXFLAGS -distance=$TMP_DIR/distance.cfg.txt"
+fi
+
 "$TARGET/build.sh"
 
 # NOTE: We pass $OUT directly to the target build.sh script, since the artifact
