@@ -43,8 +43,14 @@ export LIBS="$LIBS -l:afl_driver.o -lstdc++"
 TEMP_CFLAGS=$CFLAGS
 TEMP_CXXFLAGS=$CXXFLAGS
 
-CFLAGS="$TEMP_CFLAGS $ADDITIONAL"
-CXXFLAGS="$TEMP_CXXFLAGS $ADDITIONAL"
+if [ "$(basename $TARGET)" == "openssl" ]; then
+    echo "TARGET openssl"
+	CONFIGURE_FLAGS="$ADDITIONAL"
+else
+    CFLAGS="$TEMP_CFLAGS $ADDITIONAL"
+	CXXFLAGS="$TEMP_CXXFLAGS $ADDITIONAL"
+fi
+
 "$TARGET/build.sh"
 
 cat $TMP_DIR/BBnames.txt | rev | cut -d: -f2- | rev | sort | uniq > $TMP_DIR/BBnames2.txt && mv $TMP_DIR/BBnames2.txt $TMP_DIR/BBnames.txt
