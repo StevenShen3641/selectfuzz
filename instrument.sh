@@ -61,6 +61,7 @@ case "$(basename $TARGET)" in
     ;;
 "lua")
     LDFLAGS="$LDFLAGS -flto"
+    sed -i '/\$(CC) -o \$@ \$(LDFLAGS) \$(MYLDFLAGS) \$(LUA_O) \$(CORE_T) \$(LIBS) \$(MYLIBS) \$(DL)/ s/\$(CC) -o/\$(CC) \$(CFLAGS) -o/' $TARGET/repo/makefile
     CFLAGS="$TEMP_CFLAGS $ADDITIONAL"
     CXXFLAGS="$TEMP_CXXFLAGS $ADDITIONAL"
     ;;
@@ -86,7 +87,7 @@ esac
         cp xmllint* $OUT/
         ;;
     "lua")
-        CC=$TEMP_CC
+        # sed -i '/\$(CC) \$(CFLAGS) -o \$@ \$(LDFLAGS) \$(MYLDFLAGS) \$(LUA_O) \$(CORE_T) \$(LIBS) \$(MYLIBS) \$(DL)/ s/\$(CC) \$(CFLAGS) -o/\$(CC) -o/' makefile
         cp lua* $OUT/
         ;;
     "openssl")
