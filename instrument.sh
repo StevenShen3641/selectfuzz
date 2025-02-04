@@ -15,11 +15,11 @@ aflgo_patch_file="$FUZZER/src/aflgo.patch"
 if [ "$(basename $TARGET)" == "openssl" ]; then
     echo "TARGET openssl"
     if [ -f "$aflgo_patch_file" ]; then
-        patch -p1 -d "$FUZZER/repo" < "$aflgo_patch_file"
+        patch -p1 -d "$FUZZER/repo" <"$aflgo_patch_file"
         echo "Fuzzing patch file $aflgo_patch_file applied."
-		"$FUZZER/build.sh"
+        "$FUZZER/build.sh"
     fi
-	
+
 fi
 
 export AFLGO=$FUZZER/repo
@@ -57,14 +57,14 @@ TEMP_CXXFLAGS=$CXXFLAGS
 case "$(basename $TARGET)" in
 "openssl")
     echo "TARGET openssl"
-    CONFIGURE_FLAGS="$ADDITIONAL"
+    export CONFIGURE_FLAGS="$ADDITIONAL"
     ;;
-"lua")
-    LDFLAGS="$LDFLAGS -flto"
-    sed -i '/\$(CC) -o \$@ \$(LDFLAGS) \$(MYLDFLAGS) \$(LUA_O) \$(CORE_T) \$(LIBS) \$(MYLIBS) \$(DL)/ s/\$(CC) -o/\$(CC) \$(CFLAGS) -o/' $TARGET/repo/makefile
-    CFLAGS="$TEMP_CFLAGS $ADDITIONAL"
-    CXXFLAGS="$TEMP_CXXFLAGS $ADDITIONAL"
-    ;;
+# "lua")
+#     LDFLAGS="$LDFLAGS -flto"
+#     sed -i '/\$(CC) -o \$@ \$(LDFLAGS) \$(MYLDFLAGS) \$(LUA_O) \$(CORE_T) \$(LIBS) \$(MYLIBS) \$(DL)/ s/\$(CC) -o/\$(CC) \$(CFLAGS) -o/' $TARGET/repo/makefile
+#     CFLAGS="$TEMP_CFLAGS $ADDITIONAL"
+#     CXXFLAGS="$TEMP_CXXFLAGS $ADDITIONAL"
+#     ;;
 *)
     CFLAGS="$TEMP_CFLAGS $ADDITIONAL"
     CXXFLAGS="$TEMP_CXXFLAGS $ADDITIONAL"
@@ -86,22 +86,22 @@ esac
     "libxml2")
         cp xmllint* $OUT/
         ;;
-    "lua")
+        # "lua")
         # sed -i '/\$(CC) \$(CFLAGS) -o \$@ \$(LDFLAGS) \$(MYLDFLAGS) \$(LUA_O) \$(CORE_T) \$(LIBS) \$(MYLIBS) \$(DL)/ s/\$(CC) \$(CFLAGS) -o/\$(CC) -o/' makefile
-        cp lua* $OUT/
-        ;;
+        # cp lua* $OUT/
+        # ;;
     "openssl")
-        fuzzers=$(find fuzz -executable -type f '!' -name \*.py '!' -name \*-test '!' -name \*.pl)
+        fuzzers=$(find fuzz -executable -type f '!' -name \*.py '!' -name \*-test '!' -name \*.pl \( -name "asn1" -o -name "asn1parse" -o -name "bignum" -o -name "server" -o -name "client" -o -name "x509" \))
         for f in $fuzzers; do
             cp $f* $OUT/
         done
         ;;
-    "php")
-        fuzzers="php-fuzz-json php-fuzz-exif php-fuzz-mbstring php-fuzz-unserialize php-fuzz-parser"
-        for f in $fuzzers; do
-            cp sapi/fuzzer/$f* "$OUT/${f/php-fuzz-/}"
-        done
-        ;;
+    # "php")
+    #     fuzzers="php-fuzz-json php-fuzz-exif php-fuzz-mbstring php-fuzz-unserialize php-fuzz-parser"
+    #     for f in $fuzzers; do
+    #         cp sapi/fuzzer/$f* "$OUT/${f/php-fuzz-/}"
+    #     done
+    #     ;;
     "poppler")
         cp "$WORK/poppler/utils/"{pdfimages*,pdftoppm*} $OUT/
         ;;
@@ -118,6 +118,12 @@ cat $TMP_DIR/BBcalls.txt | sort | uniq >$TMP_DIR/BBcalls2.txt && mv $TMP_DIR/BBc
 $AFLGO/scripts/genDistance.sh $OUT $TMP_DIR
 
 CFLAGS="$TEMP_CFLAGS -distance=$TMP_DIR/distance.cfg.txt" CXXFLAGS="$TEMP_CXXFLAGS -distance=$TMP_DIR/distance.cfg.txt"
+
+if [ "$(basename $TARGET)" == "openssl" ]; then
+    echo "clean CONFIGURE_FLAGS"
+    CONFIGURE_FLAGS=""
+fi
+
 "$TARGET/build.sh"
 
 # NOTE: We pass $OUT directly to the target build.sh script, since the artifact
