@@ -117,11 +117,12 @@ cat $TMP_DIR/BBcalls.txt | sort | uniq >$TMP_DIR/BBcalls2.txt && mv $TMP_DIR/BBc
 
 $AFLGO/scripts/genDistance.sh $OUT $TMP_DIR
 
-CFLAGS="$TEMP_CFLAGS -distance=$TMP_DIR/distance.cfg.txt" CXXFLAGS="$TEMP_CXXFLAGS -distance=$TMP_DIR/distance.cfg.txt"
-
 if [ "$(basename $TARGET)" == "openssl" ]; then
     echo "clean CONFIGURE_FLAGS"
-    CONFIGURE_FLAGS=""
+    CONFIGURE_FLAGS="-distance=$TMP_DIR/distance.cfg.txt"
+    CFLAGS="$TEMP_CFLAGS" CXXFLAGS="$TEMP_CXXFLAGS"
+else
+    CFLAGS="$TEMP_CFLAGS -distance=$TMP_DIR/distance.cfg.txt" CXXFLAGS="$TEMP_CXXFLAGS -distance=$TMP_DIR/distance.cfg.txt"
 fi
 
 "$TARGET/build.sh"
