@@ -103,7 +103,7 @@ esac
     #     done
     #     ;;
     "poppler")
-        cp "$WORK/poppler/utils/"{pdfimages*,pdftoppm*} $OUT/
+        cp "$TARGET/work/poppler/utils/"{pdfimages*,pdftoppm*} $OUT/
         ;;
     *)
         echo "$(basename $TARGET)"
