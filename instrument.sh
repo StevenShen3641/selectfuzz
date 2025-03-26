@@ -22,6 +22,12 @@ if [ "$(basename $TARGET)" == "openssl" ]; then
 
 fi
 
+# sqlite3 fix a bug in clang 4
+if [ "$(basename $TARGET)" == "sqlite3" ]; then
+    echo "TARGET sqlite3"
+    sed -i -e '37s| "./sqlite3.o" ||' -e '39s/\$LDFLAGS/& .libs\/libsqlite3.a/' "$TARGET/build.sh"
+fi
+
 export AFLGO=$FUZZER/repo
 
 mkdir -p $OUT/temp
@@ -110,7 +116,7 @@ esac
         cp "$TARGET/work/poppler/utils/"{pdfimages*,pdftoppm*} $OUT/
         ;;
     *)
-        echo "$(basename $TARGET) not support!"
+        echo "$(basename $TARGET)"
         ;;
     esac
     popd
