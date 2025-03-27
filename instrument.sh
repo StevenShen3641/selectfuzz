@@ -15,29 +15,27 @@ aflgo_patch_file="$FUZZER/src/aflgo.patch"
 
 # preprocess
 (
-    # openssl
-    if [ "$(basename $TARGET)" == "openssl" ]; then
-        echo "TARGET openssl"
+    echo "TARGET $(basename $TARGET)"
+
+    case "$(basename $TARGET)" in
+    "openssl")
         if [ -f "$aflgo_patch_file" ]; then
             patch -p1 -d "$FUZZER/repo" <"$aflgo_patch_file"
             echo "Fuzzing patch file $aflgo_patch_file applied."
             "$FUZZER/build.sh"
         fi
-
-    fi
-
+    ;;
     # sqlite3 fix a bug in clang 4
-    if [ "$(basename $TARGET)" == "sqlite3" ]; then
-        echo "TARGET sqlite3"
+    "sqlite3")
         sed -i -e '/".\/sqlite3.o"/s|"./sqlite3.o"||' -e '/\$LDFLAGS/s|\$LDFLAGS|& .libs\/libsqlite3.a|' "$TARGET/build.sh"
-    fi
-
-    # php ignore build error for the first round since LLVM4 not compatible
-    if [ "$(basename $TARGET)" == "php" ]; then
-        echo "TARGET php"
+    ;;
+    # php ignore build error for the first round since clang/llvm 4 not compatible
+    "php")  
         sed -i 's/make -j$(nproc)/make -i -j$(nproc)/g' "$TARGET/build.sh"
         sed -i 's|cp sapi/fuzzer/\$fuzzerName "\$OUT/\${fuzzerName/php-fuzz-/}|cp -f sapi/fuzzer/"\$fuzzerName" "\$OUT/\${fuzzerName/php-fuzz-/}" 2>/dev/null \|\| true|' "$TARGET/build.sh"
-    fi   
+    ;;
+
+    esac
 )
 
 export AFLGO=$FUZZER/repo
@@ -60,12 +58,6 @@ export CXX=$AFLGO/afl-clang-fast++
     popd
 )
 
-
-### This target is used for PHP. Please modify the target function name as required!
-# if [ "$(basename $TARGET)" == "php" ]; then # cannot find Ftarget
-#     echo "exif_process_IFD_in_MAKERNOTE" > $TMP_DIR/Ftargets.txt
-# fi
-
 export LDFLAGS="$LDFLAGS -lpthread"
 export ADDITIONAL="-targets=$TMP_DIR/BBtargets.txt -outdir=$TMP_DIR -flto -fuse-ld=gold -Wl,-plugin-opt=save-temps"
 # BBtargets
@@ -80,22 +72,23 @@ TEMP_CXXFLAGS=$CXXFLAGS
 
 
 # set flags
-case "$(basename $TARGET)" in
-"openssl")
-    echo "TARGET openssl"
-    export CONFIGURE_FLAGS="$ADDITIONAL"
-    ;;
-# "lua")
-#     LDFLAGS="$LDFLAGS -flto"
-#     sed -i '/\$(CC) -o \$@ \$(LDFLAGS) \$(MYLDFLAGS) \$(LUA_O) \$(CORE_T) \$(LIBS) \$(MYLIBS) \$(DL)/ s/\$(CC) -o/\$(CC) \$(CFLAGS) -o/' $TARGET/repo/makefile
-#     CFLAGS="$TEMP_CFLAGS $ADDITIONAL"
-#     CXXFLAGS="$TEMP_CXXFLAGS $ADDITIONAL"
-#     ;;
-*)
-    CFLAGS="$TEMP_CFLAGS $ADDITIONAL"
-    CXXFLAGS="$TEMP_CXXFLAGS $ADDITIONAL"
-    ;;
-esac
+(
+    case "$(basename $TARGET)" in
+    "openssl")
+        export CONFIGURE_FLAGS="$ADDITIONAL"
+        ;;
+    # "lua")
+    #     LDFLAGS="$LDFLAGS -flto"
+    #     sed -i '/\$(CC) -o \$@ \$(LDFLAGS) \$(MYLDFLAGS) \$(LUA_O) \$(CORE_T) \$(LIBS) \$(MYLIBS) \$(DL)/ s/\$(CC) -o/\$(CC) \$(CFLAGS) -o/' $TARGET/repo/makefile
+    #     CFLAGS="$TEMP_CFLAGS $ADDITIONAL"
+    #     CXXFLAGS="$TEMP_CXXFLAGS $ADDITIONAL"
+    #     ;;
+    *)
+        CFLAGS="$TEMP_CFLAGS $ADDITIONAL"
+        CXXFLAGS="$TEMP_CXXFLAGS $ADDITIONAL"
+        ;;
+    esac
+)
 
 "$TARGET/build.sh"
 
