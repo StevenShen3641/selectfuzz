@@ -11,22 +11,34 @@ set -ex
 ##
 
 aflgo_patch_file="$FUZZER/src/aflgo.patch"
-# openssl
-if [ "$(basename $TARGET)" == "openssl" ]; then
-    echo "TARGET openssl"
-    if [ -f "$aflgo_patch_file" ]; then
-        patch -p1 -d "$FUZZER/repo" <"$aflgo_patch_file"
-        echo "Fuzzing patch file $aflgo_patch_file applied."
-        "$FUZZER/build.sh"
+
+
+# preprocess
+(
+    # openssl
+    if [ "$(basename $TARGET)" == "openssl" ]; then
+        echo "TARGET openssl"
+        if [ -f "$aflgo_patch_file" ]; then
+            patch -p1 -d "$FUZZER/repo" <"$aflgo_patch_file"
+            echo "Fuzzing patch file $aflgo_patch_file applied."
+            "$FUZZER/build.sh"
+        fi
+
     fi
 
-fi
+    # sqlite3 fix a bug in clang 4
+    if [ "$(basename $TARGET)" == "sqlite3" ]; then
+        echo "TARGET sqlite3"
+        sed -i -e '/".\/sqlite3.o"/s|"./sqlite3.o"||' -e '/\$LDFLAGS/s|\$LDFLAGS|& .libs\/libsqlite3.a|' "$TARGET/build.sh"
+    fi
 
-# sqlite3 fix a bug in clang 4
-if [ "$(basename $TARGET)" == "sqlite3" ]; then
-    echo "TARGET sqlite3"
-    sed -i -e '37s| "./sqlite3.o" ||' -e '39s/\$LDFLAGS/& .libs\/libsqlite3.a/' "$TARGET/build.sh"
-fi
+    # php ignore build error for the first round since LLVM4 not compatible
+    if [ "$(basename $TARGET)" == "php" ]; then
+        echo "TARGET php"
+        sed -i 's/make -j$(nproc)/make -i -j$(nproc)/g' "$TARGET/build.sh"
+        sed -i 's|cp sapi/fuzzer/\$fuzzerName "\$OUT/\${fuzzerName/php-fuzz-/}|cp -f sapi/fuzzer/"\$fuzzerName" "\$OUT/\${fuzzerName/php-fuzz-/}" 2>/dev/null \|\| true|' "$TARGET/build.sh"
+    fi   
+)
 
 export AFLGO=$FUZZER/repo
 
@@ -48,6 +60,12 @@ export CXX=$AFLGO/afl-clang-fast++
     popd
 )
 
+
+### This target is used for PHP. Please modify the target function name as required!
+# if [ "$(basename $TARGET)" == "php" ]; then # cannot find Ftarget
+#     echo "exif_process_IFD_in_MAKERNOTE" > $TMP_DIR/Ftargets.txt
+# fi
+
 export LDFLAGS="$LDFLAGS -lpthread"
 export ADDITIONAL="-targets=$TMP_DIR/BBtargets.txt -outdir=$TMP_DIR -flto -fuse-ld=gold -Wl,-plugin-opt=save-temps"
 # BBtargets
@@ -60,6 +78,8 @@ export LIBS="$LIBS -l:afl_driver.o -lstdc++"
 TEMP_CFLAGS=$CFLAGS
 TEMP_CXXFLAGS=$CXXFLAGS
 
+
+# set flags
 case "$(basename $TARGET)" in
 "openssl")
     echo "TARGET openssl"
@@ -79,6 +99,8 @@ esac
 
 "$TARGET/build.sh"
 
+
+# copy bc
 (
     pushd $TARGET/repo
 
@@ -103,7 +125,7 @@ esac
         done
         ;;
     "php")
-        fuzzers="php-fuzz-exif php-fuzz-mbstring php-fuzz-unserialize php-fuzz-parser"
+        fuzzers="php-fuzz-exif"  ## for fast demonstration, we only use exif here
         for f in $fuzzers; do
             for file in sapi/fuzzer/"$f"*; do
                 dest_filename="${file##*/}"            # Remove directory path
