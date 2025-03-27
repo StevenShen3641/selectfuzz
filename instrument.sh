@@ -12,7 +12,6 @@ set -ex
 
 aflgo_patch_file="$FUZZER/src/aflgo.patch"
 
-
 # preprocess
 (
     echo "TARGET $(basename $TARGET)"
@@ -31,8 +30,8 @@ aflgo_patch_file="$FUZZER/src/aflgo.patch"
     ;;
     # php ignore build error for the first round since clang/llvm 4 not compatible
     "php")  
-        sed -i 's/make -j$(nproc)/make -i -j$(nproc)/g' "$TARGET/build.sh"
-        sed -i 's|cp sapi/fuzzer/\$fuzzerName "\$OUT/\${fuzzerName/php-fuzz-/}|cp -f sapi/fuzzer/"\$fuzzerName" "\$OUT/\${fuzzerName/php-fuzz-/}" 2>/dev/null \|\| true|' "$TARGET/build.sh"
+        sed -i '/^popd$/{n;n;s/make -j$(nproc)/make -i -j$(nproc)/}' "$TARGET/build.sh"
+        sed -i 's|cp sapi/fuzzer/\$fuzzerName "\$OUT/\${fuzzerName/php-fuzz-/}"|cp -f sapi/fuzzer/"\$fuzzerName" "\$OUT/\${fuzzerName/php-fuzz-/}" 2>/dev/null \|\| true|' "$TARGET/build.sh"
     ;;
 
     esac
@@ -70,30 +69,26 @@ export LIBS="$LIBS -l:afl_driver.o -lstdc++"
 TEMP_CFLAGS=$CFLAGS
 TEMP_CXXFLAGS=$CXXFLAGS
 
-
 # set flags
-(
-    case "$(basename $TARGET)" in
-    "openssl")
-        export CONFIGURE_FLAGS="$ADDITIONAL"
-        ;;
-    # "lua")
-    #     LDFLAGS="$LDFLAGS -flto"
-    #     sed -i '/\$(CC) -o \$@ \$(LDFLAGS) \$(MYLDFLAGS) \$(LUA_O) \$(CORE_T) \$(LIBS) \$(MYLIBS) \$(DL)/ s/\$(CC) -o/\$(CC) \$(CFLAGS) -o/' $TARGET/repo/makefile
-    #     CFLAGS="$TEMP_CFLAGS $ADDITIONAL"
-    #     CXXFLAGS="$TEMP_CXXFLAGS $ADDITIONAL"
-    #     ;;
-    *)
-        CFLAGS="$TEMP_CFLAGS $ADDITIONAL"
-        CXXFLAGS="$TEMP_CXXFLAGS $ADDITIONAL"
-        ;;
-    esac
-)
+case "$(basename $TARGET)" in
+"openssl")
+    echo "TARGET openssl"
+    export CONFIGURE_FLAGS="$ADDITIONAL"
+    ;;
+# "lua")
+#     LDFLAGS="$LDFLAGS -flto"
+#     sed -i '/\$(CC) -o \$@ \$(LDFLAGS) \$(MYLDFLAGS) \$(LUA_O) \$(CORE_T) \$(LIBS) \$(MYLIBS) \$(DL)/ s/\$(CC) -o/\$(CC) \$(CFLAGS) -o/' $TARGET/repo/makefile
+#     CFLAGS="$TEMP_CFLAGS $ADDITIONAL"
+#     CXXFLAGS="$TEMP_CXXFLAGS $ADDITIONAL"
+#     ;;
+*)
+    CFLAGS="$TEMP_CFLAGS $ADDITIONAL"
+    CXXFLAGS="$TEMP_CXXFLAGS $ADDITIONAL"
+    ;;
+esac
 
 "$TARGET/build.sh"
 
-
-# copy bc
 (
     pushd $TARGET/repo
 
@@ -118,7 +113,7 @@ TEMP_CXXFLAGS=$CXXFLAGS
         done
         ;;
     "php")
-        fuzzers="php-fuzz-exif"  ## for fast demonstration, we only use exif here
+        fuzzers="php-fuzz-exif"
         for f in $fuzzers; do
             for file in sapi/fuzzer/"$f"*; do
                 dest_filename="${file##*/}"            # Remove directory path
