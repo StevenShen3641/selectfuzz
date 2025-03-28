@@ -17,7 +17,8 @@ aflgo_patch_file="$FUZZER/src/aflgo.patch"
     echo "TARGET $(basename $TARGET)"
 
     case "$(basename $TARGET)" in
-    "openssl")
+    # openssl https://github.com/aflgo/aflgo/issues/12
+    "openssl")  
         if [ -f "$aflgo_patch_file" ]; then
             patch -p1 -d "$FUZZER/repo" <"$aflgo_patch_file"
             echo "Fuzzing patch file $aflgo_patch_file applied."
@@ -41,6 +42,7 @@ export AFLGO=$FUZZER/repo
 
 mkdir -p $OUT/temp
 export TMP_DIR=$OUT/temp
+
 export CC=$AFLGO/afl-clang-fast
 export CXX=$AFLGO/afl-clang-fast++
 
@@ -66,21 +68,20 @@ export LIBS="$LIBS -l:afl_driver.o -lstdc++"
 
 "$MAGMA/build.sh"
 
+echo "## Build Target"
 TEMP_CFLAGS=$CFLAGS
 TEMP_CXXFLAGS=$CXXFLAGS
 
 # set flags
 case "$(basename $TARGET)" in
 "openssl")
-    echo "TARGET openssl"
     export CONFIGURE_FLAGS="$ADDITIONAL"
     ;;
-# "lua")
-#     LDFLAGS="$LDFLAGS -flto"
-#     sed -i '/\$(CC) -o \$@ \$(LDFLAGS) \$(MYLDFLAGS) \$(LUA_O) \$(CORE_T) \$(LIBS) \$(MYLIBS) \$(DL)/ s/\$(CC) -o/\$(CC) \$(CFLAGS) -o/' $TARGET/repo/makefile
-#     CFLAGS="$TEMP_CFLAGS $ADDITIONAL"
-#     CXXFLAGS="$TEMP_CXXFLAGS $ADDITIONAL"
-#     ;;
+"lua")
+    LDFLAGS="$LDFLAGS -flto -fuse-ld=gold -Wl,-plugin-opt=save-temps"
+    CFLAGS="$TEMP_CFLAGS $ADDITIONAL"
+    CXXFLAGS="$TEMP_CXXFLAGS $ADDITIONAL"
+    ;;
 *)
     CFLAGS="$TEMP_CFLAGS $ADDITIONAL"
     CXXFLAGS="$TEMP_CXXFLAGS $ADDITIONAL"
@@ -102,10 +103,9 @@ esac
     "libxml2")
         cp xmllint* $OUT/
         ;;
-        # "lua")
-        # sed -i '/\$(CC) \$(CFLAGS) -o \$@ \$(LDFLAGS) \$(MYLDFLAGS) \$(LUA_O) \$(CORE_T) \$(LIBS) \$(MYLIBS) \$(DL)/ s/\$(CC) \$(CFLAGS) -o/\$(CC) -o/' makefile
-        # cp lua* $OUT/
-        # ;;
+        "lua")
+        cp lua* $OUT/
+        ;;
     "openssl")
         fuzzers=$(find fuzz -executable -type f '!' -name \*.py '!' -name \*-test '!' -name \*.pl \( -name "asn1" -o -name "asn1parse" -o -name "bignum" -o -name "server" -o -name "client" -o -name "x509" \))
         for f in $fuzzers; do
@@ -113,7 +113,8 @@ esac
         done
         ;;
     "php")
-        fuzzers="php-fuzz-exif"
+        # fuzzers="php-fuzz-exif php-fuzz-mbstring php-fuzz-unserialize php-fuzz-parser"
+        fuzzers="php-fuzz-exif"  # Since our experiments only use exif. Feel free to set for different programs
         for f in $fuzzers; do
             for file in sapi/fuzzer/"$f"*; do
                 dest_filename="${file##*/}"            # Remove directory path
@@ -132,6 +133,7 @@ esac
     popd
 )
 
+echo "## Generate Distance"
 cat $TMP_DIR/BBnames.txt | rev | cut -d: -f2- | rev | sort | uniq >$TMP_DIR/BBnames2.txt && mv $TMP_DIR/BBnames2.txt $TMP_DIR/BBnames.txt
 cat $TMP_DIR/BBcalls.txt | sort | uniq >$TMP_DIR/BBcalls2.txt && mv $TMP_DIR/BBcalls2.txt $TMP_DIR/BBcalls.txt
 
